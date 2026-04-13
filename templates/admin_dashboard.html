@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Administrativo | Mj Porções</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body class="admin-body">
+
+    <div class="admin-wrapper">
+        <header class="admin-header">
+            <div class="brand">
+                {{ loja.store_name if loja else 'Mj Porções' }} <small>Admin</small>
+            </div>
+            <div class="admin-user">
+                Olá, <span>{{ session.get('user_nome', 'Administrador') }}</span>
+                <a href="{{ url_for('logout') }}" class="btn-logout-minimal">Sair</a>
+            </div>
+        </header>
+
+        <main class="admin-content">
+            <section class="stats-grid">
+                <div class="stat-card">
+                    <h3>Total de Pedidos</h3>
+                    <p class="stat-value">{{ total_pedidos }}</p>
+                    <span class="stat-label">Pedidos registrados no sistema</span>
+                </div>
+                <div class="stat-card">
+                    <h3>Faturamento</h3>
+                    <p class="stat-value">R$ {{ "%.2f"|format(faturamento) }}</p>
+                    <span class="stat-label">Valor acumulado no ciclo atual</span>
+                </div>
+                <div class="stat-card">
+                    <h3>Pedidos Pendentes</h3>
+                    <p class="stat-value">{{ pedidos_pendentes }}</p>
+                    <span class="stat-label">Aguardando atualização</span>
+                </div>
+            </section>
+
+            <section class="admin-actions">
+                <div class="admin-section-heading">
+                    <div>
+                        <span class="admin-kicker">Operação</span>
+                        <h2 class="section-title">Gestão de operação</h2>
+                    </div>
+                    <p>Use os atalhos abaixo para administrar o cardápio e acompanhar os pedidos em aberto.</p>
+                </div>
+                <div class="action-buttons">
+                    <a href="{{ url_for('add_produto') }}" class="btn-admin-gold">Novo Produto</a>
+                    <a href="{{ url_for('add_produto') }}" class="btn-admin-outline">Editar Cardápio</a>
+                    <a href="{{ url_for('meus_pedidos') }}" class="btn-admin-outline">Ver Histórico</a>
+                </div>
+            </section>
+
+            <section class="admin-management-grid">
+                <article class="admin-panel-card">
+                    <div class="admin-section-heading compact">
+                        <div>
+                            <span class="admin-kicker">Loja</span>
+                            <h2 class="section-title">Configurações da loja</h2>
+                            <p class="{% if loja and loja.is_open %}status-open{% else %}status-closed{% endif %}" style="margin-top: 8px; font-weight: 600;">
+                                Status atual: {% if loja and loja.is_open %}Online{% else %}Offline{% endif %}
+                            </p>
+                        </div>
+                    </div>
+
+                    <form action="{{ url_for('atualizar_loja') }}" method="POST" enctype="multipart/form-data" class="admin-form-grid">
+                        <input type="hidden" name="csrf_action" value="atualizar_loja">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token_for('atualizar_loja') }}">
+                        <label>
+                            <span>Nome da loja</span>
+                            <input type="text" name="store_name" value="{{ loja.store_name if loja else '' }}" required>
+                        </label>
+                        <label>
+                            <span>Horários</span>
+                            <input type="text" name="opening_hours" value="{{ loja.opening_hours if loja else '' }}" placeholder="Ex: Todos os dias, das 18h às 23h">
+                        </label>
+                        <label class="admin-full-width">
+                            <span>Slogan</span>
+                            <textarea name="tagline" rows="3">{{ loja.tagline if loja else '' }}</textarea>
+                        </label>
+                        <label>
+                            <span>Modo de entrega</span>
+                            <input type="text" name="delivery_mode" value="{{ loja.delivery_mode if loja else '' }}" placeholder="Entrega, retirada ou ambos">
+                        </label>
+                        <label>
+                            <span>Status da loja</span>
+                            <select name="store_status">
+                                <option value="open" {% if loja and loja.is_open %}selected{% endif %}>Loja Aberta (Online)</option>
+                                <option value="closed" {% if loja and not loja.is_open %}selected{% endif %}>Loja Fechada (Offline)</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>Banner</span>
+                            <input type="file" name="banner_image" accept="image/*">
+                        </label>
+                        <label>
+                            <span>Foto de perfil</span>
+                            <input type="file" name="profile_image" accept="image/*">
+                        </label>
+                        <button type="submit" class="btn-admin-gold admin-full-width">Salvar configurações</button>
+                    </form>
+
+                    <div class="admin-media-preview-grid">
+                        <div class="admin-media-preview">
+                            <span>Banner atual</span>
+                            {% if loja and loja.banner_image %}
+                            <img src="{{ url_for('static', filename=loja.banner_image) }}" alt="Banner atual">
+                            {% else %}
+                            <div class="admin-media-fallback">Sem banner</div>
+                            {% endif %}
+                        </div>
+                        <div class="admin-media-preview">
+                            <span>Perfil atual</span>
+                            {% if loja and loja.profile_image %}
+                            <img src="{{ url_for('static', filename=loja.profile_image) }}" alt="Perfil atual" class="profile-thumb">
+                            {% else %}
+                            <div class="admin-media-fallback small">Sem foto</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </article>
+
+                <article class="admin-panel-card">
+                    <div class="admin-section-heading compact">
+                        <div>
+                            <span class="admin-kicker">Categorias</span>
+                            <h2 class="section-title">Organização do cardápio</h2>
+                        </div>
+                    </div>
+
+                    <form action="{{ url_for('adicionar_categoria') }}" method="POST" class="admin-form-grid compact-form">
+                        <input type="hidden" name="csrf_action" value="adicionar_categoria">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token_for('adicionar_categoria') }}">
+                        <label>
+                            <span>Nome da categoria</span>
+                            <input type="text" name="name" placeholder="Ex: Porções" required>
+                        </label>
+                        <label>
+                            <span>Ordem</span>
+                            <input type="number" name="display_order" value="0">
+                        </label>
+                        <button type="submit" class="btn-admin-gold admin-full-width">Criar categoria</button>
+                    </form>
+
+                    <div class="admin-tag-list">
+                        {% for categoria in categorias %}
+                        <form action="{{ url_for('excluir_categoria', category_id=categoria.id) }}" method="POST" class="admin-tag-item">
+                            <input type="hidden" name="csrf_action" value="excluir_categoria">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token_for('excluir_categoria') }}">
+                            <span>{{ categoria.name }}</span>
+                            <small>ordem {{ categoria.display_order }}</small>
+                            <button type="submit">Excluir</button>
+                        </form>
+                        {% else %}
+                        <p class="admin-empty-text">Nenhuma categoria cadastrada.</p>
+                        {% endfor %}
+                    </div>
+                </article>
+
+                <article class="admin-panel-card">
+                    <div class="admin-section-heading compact">
+                        <div>
+                            <span class="admin-kicker">Entrega</span>
+                            <h2 class="section-title">Bairros e taxas</h2>
+                        </div>
+                    </div>
+
+                    <form action="{{ url_for('adicionar_bairro_entrega') }}" method="POST" class="admin-form-grid compact-form">
+                        <input type="hidden" name="csrf_action" value="adicionar_bairro_entrega">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token_for('adicionar_bairro_entrega') }}">
+                        <label>
+                            <span>Bairro</span>
+                            <input type="text" name="name" placeholder="Ex: Centro" required>
+                        </label>
+                        <label>
+                            <span>Taxa (R$)</span>
+                            <input type="number" step="0.01" min="0" name="delivery_fee" value="0" required>
+                        </label>
+                        <button type="submit" class="btn-admin-gold admin-full-width">Adicionar bairro</button>
+                    </form>
+
+                    <div class="admin-tag-list">
+                        {% for area in delivery_areas %}
+                        <div class="admin-tag-item">
+                            <span>{{ area.name }}</span>
+                            <small>taxa atual R$ {{ "%.2f"|format(area.delivery_fee) }}</small>
+
+                            <form action="{{ url_for('editar_bairro_entrega', area_id=area.id) }}" method="POST" class="delivery-area-inline-form">
+                                <input type="hidden" name="csrf_action" value="editar_bairro_entrega">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token_for('editar_bairro_entrega') }}">
+                                <input type="text" name="name" value="{{ area.name }}" required>
+                                <input type="number" step="0.01" min="0" name="delivery_fee" value="{{ "%.2f"|format(area.delivery_fee) }}" required>
+                                <button type="submit">Salvar</button>
+                            </form>
+
+                            <form action="{{ url_for('excluir_bairro_entrega', area_id=area.id) }}" method="POST" class="delivery-area-inline-form">
+                                <input type="hidden" name="csrf_action" value="excluir_bairro_entrega">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token_for('excluir_bairro_entrega') }}">
+                                <button type="submit">Excluir</button>
+                            </form>
+                        </div>
+                        {% else %}
+                        <p class="admin-empty-text">Nenhum bairro cadastrado.</p>
+                        {% endfor %}
+                    </div>
+                </article>
+            </section>
+
+            <section class="recent-orders">
+                <div class="admin-section-heading">
+                    <div>
+                        <span class="admin-kicker">Financeiro</span>
+                        <h2 class="section-title">Ciclo atual</h2>
+                    </div>
+                    <p>Período iniciado em {{ financial_period_start_br }}. Ao fechar a loja, esse ciclo é salvo no histórico e resetado.</p>
+                </div>
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Pedidos no ciclo</th>
+                                <th>Receita bruta</th>
+                                <th>Receita entregue</th>
+                                <th>Receita em aberto</th>
+                                <th>Receita cancelada</th>
+                                <th>Entregues</th>
+                                <th>Cancelados</th>
+                                <th>Pendentes</th>
+                                <th>Em preparo</th>
+                                <th>A caminho</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>{{ financial_cycle.orders_count if financial_cycle else 0 }}</td>
+                                <td>R$ {{ "%.2f"|format(faturamento) }}</td>
+                                <td>R$ {{ "%.2f"|format(financial_cycle.delivered_revenue if financial_cycle else 0) }}</td>
+                                <td>R$ {{ "%.2f"|format(financial_cycle.open_revenue if financial_cycle else 0) }}</td>
+                                <td>R$ {{ "%.2f"|format(financial_cycle.canceled_revenue if financial_cycle else 0) }}</td>
+                                <td>{{ financial_cycle.delivered_orders if financial_cycle else 0 }}</td>
+                                <td>{{ financial_cycle.canceled_orders if financial_cycle else 0 }}</td>
+                                <td>{{ financial_cycle.pending_orders if financial_cycle else 0 }}</td>
+                                <td>{{ financial_cycle.in_preparation_orders if financial_cycle else 0 }}</td>
+                                <td>{{ financial_cycle.on_the_way_orders if financial_cycle else 0 }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="recent-orders">
+                <div class="admin-section-heading">
+                    <div>
+                        <span class="admin-kicker">Financeiro</span>
+                        <h2 class="section-title">Histórico de fechamentos</h2>
+                    </div>
+                    <p>Cada fechamento da loja gera um registro completo do período financeiro.</p>
+                </div>
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Fechado em</th>
+                                <th>Período</th>
+                                <th>Pedidos</th>
+                                <th>Receita bruta</th>
+                                <th>Receita entregue</th>
+                                <th>Receita em aberto</th>
+                                <th>Receita cancelada</th>
+                                <th>Entregues</th>
+                                <th>Cancelados</th>
+                                <th>Pendentes</th>
+                                <th>Em preparo</th>
+                                <th>A caminho</th>
+                                <th>Responsável</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for closure in financial_history %}
+                            <tr>
+                                <td>{{ closure.period_end_br }}</td>
+                                <td>{{ closure.period_start_br }} até {{ closure.period_end_br }}</td>
+                                <td>{{ closure.orders_count }}</td>
+                                <td>R$ {{ "%.2f"|format(closure.gross_revenue) }}</td>
+                                <td>R$ {{ "%.2f"|format(closure.delivered_revenue) }}</td>
+                                <td>R$ {{ "%.2f"|format(closure.open_revenue) }}</td>
+                                <td>R$ {{ "%.2f"|format(closure.canceled_revenue) }}</td>
+                                <td>{{ closure.delivered_orders }}</td>
+                                <td>{{ closure.canceled_orders }}</td>
+                                <td>{{ closure.pending_orders }}</td>
+                                <td>{{ closure.in_preparation_orders }}</td>
+                                <td>{{ closure.on_the_way_orders }}</td>
+                                <td>{{ closure.closed_by_name or 'Administrador' }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="14">Ainda não houve fechamento da loja para gerar histórico.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="recent-orders">
+                <div class="admin-section-heading">
+                    <div>
+                        <span class="admin-kicker">Fila atual</span>
+                        <h2 class="section-title">Pedidos em aberto</h2>
+                    </div>
+                    <p>Atualize o status direto da tabela para manter o atendimento em dia.</p>
+                </div>
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Cliente</th>
+                                <th>Telefone</th>
+                                <th>Endereço</th>
+                                <th>Bairro</th>
+                                <th>Taxa</th>
+                                <th>Pagamento</th>
+                                <th>Status</th>
+                                <th>Total</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pedido in pedidos %}
+                            <tr>
+                                <td>#{{ pedido.id }}</td>
+                                <td>{{ pedido.cliente }}</td>
+                                <td>{{ pedido.cliente_telefone }}</td>
+                                <td>{{ pedido.cliente_endereco }}</td>
+                                <td>{{ pedido.cliente_bairro }}</td>
+                                <td>R$ {{ "%.2f"|format(pedido.taxa_entrega) }}</td>
+                                <td>{{ pedido.forma_pagamento }}</td>
+                                <td>
+                                    <span class="badge {% if pedido.status == 'Pendente' %}status-pending{% elif pedido.status == 'Entregue' %}status-success{% else %}status-info{% endif %}">
+                                        {{ pedido.status }}
+                                    </span>
+                                </td>
+                                <td>R$ {{ "%.2f"|format(pedido.total) }}</td>
+                                <td>
+                                    <div class="admin-inline-actions">
+                                        <a href="{{ url_for('atualizar_status', pedido_id=pedido.id, status='Em preparo') }}" class="btn-action secondary">Em preparo</a>
+                                        <a href="{{ url_for('atualizar_status', pedido_id=pedido.id, status='Entregue') }}" class="btn-action">Entregue</a>
+                                        <a href="{{ url_for('atualizar_status', pedido_id=pedido.id, status='Cancelado') }}" class="btn-action danger">Cancelar</a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="10">Nenhum pedido recebido ainda.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="recent-orders">
+                <div class="admin-section-heading">
+                    <div>
+                        <span class="admin-kicker">Cardápio</span>
+                        <h2 class="section-title">Resumo dos produtos</h2>
+                    </div>
+                    <p>Veja rapidamente o que está ativo, em destaque e em qual categoria cada item está.</p>
+                </div>
+                <div class="admin-product-grid">
+                    {% for produto in produtos[:8] %}
+                    <article class="admin-product-card">
+                        <div>
+                            <h3>{{ produto.nome }}</h3>
+                            <p>{{ produto.category_name or 'Sem categoria' }}</p>
+                        </div>
+                        <div class="admin-product-meta">
+                            <span>R$ {{ "%.2f"|format(produto.preco) }}</span>
+                            {% if produto.is_featured %}<small>Destaque</small>{% endif %}
+                            {% if not produto.is_active %}<small>Oculto</small>{% endif %}
+                        </div>
+                    </article>
+                    {% else %}
+                    <p class="admin-empty-text">Nenhum produto cadastrado ainda.</p>
+                    {% endfor %}
+                </div>
+            </section>
+        </main>
+    </div>
+
+</body>
+</html>

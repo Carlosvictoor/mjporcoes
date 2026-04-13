@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Carrinho - Mj Porções</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="cart-page">
+    <main class="cart-shell">
+        <header class="cart-header">
+            <div>
+                <span class="cart-kicker">Seu pedido</span>
+                <h1>🛒 Seu Carrinho</h1>
+                <p>Revise seus itens antes de finalizar.</p>
+            </div>
+            <div style="display: flex; gap: 16px; align-items: center;">
+                <a href="{{ url_for('produtos') }}" class="cart-back-link">← Continuar comprando</a>
+                {% if session.get('user_id') %}
+                <a href="{{ url_for('logout') }}" style="color: #d84c4c; text-decoration: none; font-weight: 600; padding: 8px 12px; border-radius: 6px;">Sair</a>
+                {% endif %}
+            </div>
+        </header>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <section class="cart-flash-stack">
+        {% for message in messages %}
+          <div class="cart-flash">{{ message }}</div>
+        {% endfor %}
+        </section>
+      {% endif %}
+    {% endwith %}
+
+        <section class="cart-layout">
+            <div class="cart-items-panel">
+                <div class="cart-section-title">
+                    <h2>Itens adicionados</h2>
+                    <span>{{ carrinho|length }} produto(s)</span>
+                </div>
+
+                <div class="cart-items-list">
+                    {% for id, item in carrinho.items() %}
+                    <article class="cart-item-card">
+                        <div class="cart-item-main">
+                            <div class="cart-item-avatar">{{ item.nome[0] }}</div>
+                            <div>
+                                <h3>{{ item.quantidade }}x {{ item.nome }}</h3>
+                                <p>R$ {{ "%.2f"|format(item.preco) }} cada</p>
+                            </div>
+                        </div>
+                        <div class="cart-item-side">
+                            <strong>R$ {{ "%.2f"|format(item.preco * item.quantidade) }}</strong>
+                            <a href="{{ url_for('remover_item', produto_id=id) }}" class="cart-remove-link">Remover</a>
+                        </div>
+                    </article>
+                    {% else %}
+                    <div class="cart-empty-state">
+                        <h3>Seu carrinho está vazio</h3>
+                        <p>Volte ao cardápio para adicionar as porções que deseja pedir.</p>
+                        <a href="{{ url_for('produtos') }}" class="cart-primary-btn">Ir para o cardápio</a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {% if carrinho %}
+            <aside class="cart-summary-card">
+                <span class="cart-kicker">Resumo</span>
+                <h2>Total do pedido</h2>
+                <strong>R$ {{ "%.2f"|format(total) }}</strong>
+                <p>Confira seus itens e siga para finalizar quando estiver pronto.</p>
+                <a href="{{ url_for('finalizar_pedido') }}" class="cart-primary-btn">Continuar para dados de entrega</a>
+                <a href="{{ url_for('limpar_carrinho') }}" class="cart-secondary-link">Esvaziar carrinho</a>
+            </aside>
+            {% endif %}
+        </section>
+    </main>
+
+</body>
+</html>

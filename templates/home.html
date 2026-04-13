@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍔 Mj Porções - Bem-vindo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="home-page">
+
+    <div class="home-shell">
+        <section class="hero hero-home" {% if store_settings and store_settings['banner_image'] %}style="background-image: linear-gradient(135deg, rgba(132, 98, 9, 0.78), rgba(212, 174, 57, 0.6)), url('{{ url_for('static', filename=store_settings['banner_image']) }}');"{% endif %}>
+            <div class="hero-content home-hero-content">
+                <span class="hero-badge">Cardápio digital</span>
+                <h1>{{ store_settings['store_name'] if store_settings else 'Mj Porções' }} 🛵</h1>
+                <p>{{ store_settings['tagline'] if store_settings else 'Seu atendimento online com visual moderno, pedido rápido e uma experiência forte no celular.' }}</p>
+
+                <div class="hero-btns home-hero-btns">
+                    {% if session.get('user_id') %}
+                    <a href="{{ url_for('logout') }}" class="btn-main">Sair da conta</a>
+                    {% else %}
+                    <a href="javascript:void(0)" onclick="abrirModal()" class="btn-main">Fazer login</a>
+                    {% endif %}
+                    <a href="{{ url_for('produtos') }}" class="btn-outline">Ver cardápio</a>
+                    {% if session_is_admin %}
+                    <a href="{{ url_for('admin_dashboard') }}" class="btn-outline">Painel admin</a>
+                    {% endif %}
+                </div>
+
+                <div class="home-hero-points">
+                    <span>{% if store_is_open %}Online{% else %}Offline{% endif %}</span>
+                    <span>{{ store_settings['delivery_mode'] if store_settings else 'Entrega e retirada' }}</span>
+                    <span>{{ store_settings['opening_hours'] if store_settings else 'Horários a definir' }}</span>
+                </div>
+            </div>
+
+            <div class="home-side-card">
+                <div class="home-side-box media-box">
+                    {% if store_settings and store_settings['profile_image'] %}
+                    <img src="{{ url_for('static', filename=store_settings['profile_image']) }}" alt="Perfil da loja" class="store-profile-preview">
+                    {% else %}
+                    <div class="store-profile-fallback">{{ (store_settings['store_name'][0] if store_settings else 'M') }}</div>
+                    {% endif %}
+                    <div>
+                        <strong>Foto de perfil</strong>
+                        <p>Atualizada direto pelo painel administrativo.</p>
+                    </div>
+                </div>
+                <div class="home-side-box accent">
+                    <strong class="store-status-inline">
+                        <span class="status-dot {% if store_is_open %}status-dot-open{% else %}status-dot-closed{% endif %}" aria-hidden="true"></span>
+                        {% if store_is_open %}Loja Aberta{% else %}Loja fechada{% endif %}
+                    </strong>
+                    <p>{{ store_settings['opening_hours'] if store_settings else 'Defina os horários no painel.' }}</p>
+                </div>
+            </div>
+        </section>
+
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <section class="home-flash-stack">
+              {% for message in messages %}
+                <div class="home-flash">{{ message }}</div>
+              {% endfor %}
+            </section>
+          {% endif %}
+        {% endwith %}
+
+        <section class="home-feature-grid">
+            <article class="home-feature-card">
+                <span class="feature-kicker">Pedido</span>
+                <h2>Escolha sem complicação</h2>
+                <p>O cliente entra, encontra os itens principais e adiciona ao carrinho com poucos toques.</p>
+            </article>
+            <article class="home-feature-card">
+                <span class="feature-kicker">Marca</span>
+                <h2>Visual mais forte</h2>
+                <p>A identidade amarela e dourada deixa a MJ Porções com presença mais marcante.</p>
+            </article>
+            <article class="home-feature-card">
+                <span class="feature-kicker">Mobile</span>
+                <h2>Feito para celular</h2>
+                <p>Estrutura responsiva para o usuário navegar bem em telas pequenas sem esforço.</p>
+            </article>
+        </section>
+    </div>
+
+    <div id="modalLogin" class="modal-overlay">
+        <div class="modal-content auth-modal-content">
+            <span class="close-btn" onclick="fecharModal()">&times;</span>
+            
+            <div class="modal-header">
+                <div class="tab-active">LOGIN</div>
+                <a href="{{ url_for('register') }}" class="tab-link">CADASTRAR</a>
+            </div>
+
+            <div class="modal-body">
+                <form action="{{ url_for('login') }}" method="POST">
+                    <input type="hidden" name="csrf_action" value="login">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token_for('login') }}">
+                    <input type="email" name="email" placeholder="E-mail" required>
+                    <input type="password" name="senha" placeholder="Senha" required>
+                    
+                    <div class="modal-options">
+                        <label><input type="checkbox"> Mantenha-me conectado</label>
+                        <a href="#">Esqueci minha senha</a>
+                    </div>
+
+                    <button type="submit" class="btn-entrar-modal">ENTRAR</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function abrirModal() {
+            document.getElementById('modalLogin').style.display = 'flex';
+        }
+        function fecharModal() {
+            document.getElementById('modalLogin').style.display = 'none';
+        }
+        // Fecha o modal se clicar no fundo escuro
+        window.onclick = function(event) {
+            let modal = document.getElementById('modalLogin');
+            if (event.target == modal) { fecharModal(); }
+        }
+    </script>
+</body>
+</html>

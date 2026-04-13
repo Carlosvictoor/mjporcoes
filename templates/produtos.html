@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cardápio - Mj Porções</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="menu-page">
+    {% set cart_count = namespace(value=0) %}
+    {% for item in session.get('carrinho', {}).values() %}
+        {% set cart_count.value = cart_count.value + item.quantidade %}
+    {% endfor %}
+
+    <div class="menu-shell">
+        <header class="menu-topbar">
+            <a href="{{ url_for('home') }}" class="menu-brand">{{ store_settings['store_name'] if store_settings else 'MJ Porções' }}</a>
+            <div class="menu-topbar-actions">
+                <a href="{{ url_for('home') }}">Início</a>
+                <a href="{{ url_for('carrinho') }}">Carrinho</a>
+                {% if session.get('user_id') %}
+                <a href="{{ url_for('meus_pedidos') }}">Pedidos</a>
+                {% endif %}
+                {% if session_is_admin %}
+                <a href="{{ url_for('admin_dashboard') }}">Admin</a>
+                {% endif %}
+                {% if session.get('user_id') %}
+                <a href="{{ url_for('logout') }}" style="color: #d84c4c;">Sair</a>
+                {% endif %}
+            </div>
+        </header>
+
+        <main class="menu-layout">
+            <section class="menu-hero-card" {% if store_settings and store_settings['banner_image'] %}style="background-image: linear-gradient(135deg, rgba(187, 142, 18, 0.92), rgba(245, 205, 92, 0.78)), url('{{ url_for('static', filename=store_settings['banner_image']) }}'); background-size: cover; background-position: center;"{% endif %}>
+                <div class="menu-hero-copy">
+                    <span class="hero-kicker">Cardápio digital</span>
+                    <h1>{{ store_settings['store_name'] if store_settings else 'Mj Porções' }}</h1>
+                    <p>{{ store_settings['tagline'] if store_settings else 'Porções caprichadas, pedido rápido e uma navegação feita para escolher sem perder tempo.' }}</p>
+
+                    <div class="menu-meta-row">
+                        <span class="meta-pill {% if store_is_open %}status-open{% else %}status-closed{% endif %}">{% if store_is_open %}Online{% else %}Offline{% endif %}</span>
+                        <span class="meta-pill">{{ store_settings['delivery_mode'] if store_settings else 'Entrega e retirada' }}</span>
+                        <span class="meta-pill">{{ store_settings['opening_hours'] if store_settings else 'Horários não definidos' }}</span>
+                    </div>
+                </div>
+
+                <div class="menu-hero-side">
+                    <div class="store-rating-card store-media-card">
+                        {% if store_settings and store_settings['profile_image'] %}
+                        <img src="{{ url_for('static', filename=store_settings['profile_image']) }}" alt="Foto da loja" class="menu-store-avatar">
+                        {% else %}
+                        <div class="menu-store-avatar fallback">{{ (store_settings['store_name'][0] if store_settings else 'M') }}</div>
+                        {% endif %}
+                        <div>
+                            <strong>Perfil da loja</strong>
+                            <span>{{ store_settings['store_name'] if store_settings else 'MJ Porções' }}</span>
+                        </div>
+                    </div>
+                    <div class="store-rating-card accent">
+                        <strong>Banner e identidade</strong>
+                        <span>O admin pode trocar banner, foto de perfil, horários e status da loja.</span>
+                    </div>
+                </div>
+            </section>
+
+            <nav class="menu-tabs">
+                <a href="#destaques" class="is-active">Destaques</a>
+                {% for section in menu_sections %}
+                <a href="#categoria-{{ section.id }}">{{ section.name }}</a>
+                {% endfor %}
+                <a href="#informacoes">Informações</a>
+            </nav>
+
+            <section class="menu-toolbar">
+                <label class="search-box" for="menuSearch">
+                    <span>Buscar item</span>
+                    <input id="menuSearch" type="search" placeholder="Digite o nome da porção...">
+                </label>
+
+                <div class="toolbar-cta-group">
+                    <a href="#destaques" class="toolbar-chip">Destaques</a>
+                    {% for section in menu_sections %}
+                    <a href="#categoria-{{ section.id }}" class="toolbar-chip">{{ section.name }}</a>
+                    {% endfor %}
+                    <a href="{{ url_for('carrinho') }}" class="toolbar-cart-link">Ver carrinho</a>
+                </div>
+            </section>
+
+            {% with messages = get_flashed_messages() %}
+              {% if messages %}
+                <section class="flash-stack">
+                {% for message in messages %}
+                  <div class="menu-flash">{{ message }}</div>
+                {% endfor %}
+                </section>
+              {% endif %}
+            {% endwith %}
+
+            <section id="destaques" class="menu-block">
+                <div class="block-heading">
+                    <div>
+                        <span class="block-kicker">Sugestões</span>
+                        <h2>Favoritos da casa</h2>
+                    </div>
+                    <p>Os itens que aparecem primeiro para acelerar a escolha.</p>
+                </div>
+
+                <div class="featured-grid">
+                    {% for produto in featured_products %}
+                    <article class="featured-card menu-item" data-name="{{ produto.nome|lower }}">
+                        <div class="featured-badge">Destaque</div>
+                        <h3>{{ produto.nome }}</h3>
+                        <p>{{ produto.descricao or 'Preparo artesanal, porção generosa e finalização no capricho.' }}</p>
+                        <div class="featured-footer">
+                            <strong>R$ {{ "%.2f"|format(produto.preco) }}</strong>
+                            {% if store_is_open or session_is_admin %}
+                            <a href="{{ url_for('add_carrinho', produto_id=produto.id) }}">Adicionar</a>
+                            {% else %}
+                            <span class="disabled-action">Loja fechada</span>
+                            {% endif %}
+                        </div>
+                    </article>
+                    {% else %}
+                    <div class="empty-state-card">
+                        <h3>Seu cardápio ainda está vazio</h3>
+                        <p>Cadastre produtos para montar a vitrine digital da MJ Porções.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            {% for section in menu_sections %}
+            <section id="categoria-{{ section.id }}" class="menu-block menu-category-block">
+                <div class="block-heading">
+                    <div>
+                        <span class="block-kicker">Categoria</span>
+                        <h2>{{ section.name }}</h2>
+                    </div>
+                    <p>{{ section.products|length }} item(ns) cadastrados nesta seção.</p>
+                </div>
+
+                <div class="menu-list" id="menuList">
+                    {% for produto in section.products %}
+                    <article class="menu-card menu-item" data-name="{{ produto.nome|lower }} {{ section.name|lower }}">
+                        <div class="menu-card-main">
+                            {% if produto.image_path %}
+                            <img src="{{ url_for('static', filename=produto.image_path) }}" alt="{{ produto.nome }}" class="menu-item-photo">
+                            {% else %}
+                            <div class="menu-item-avatar">{{ produto.nome[0] }}</div>
+                            {% endif %}
+                            <div class="menu-card-copy">
+                                <div class="menu-card-header-line">
+                                    <h3>{{ produto.nome }}</h3>
+                                    {% if produto.is_featured %}
+                                    <span class="mini-badge">Destaque</span>
+                                    {% endif %}
+                                </div>
+                                <p>{{ produto.descricao or 'Descrição não informada.' }}</p>
+                            </div>
+                        </div>
+                        <div class="menu-card-side">
+                            <strong>R$ {{ "%.2f"|format(produto.preco) }}</strong>
+                            {% if store_is_open or session_is_admin %}
+                            <a href="{{ url_for('add_carrinho', produto_id=produto.id) }}" class="menu-add-btn">Adicionar</a>
+                            {% else %}
+                            <span class="disabled-action">Loja fechada</span>
+                            {% endif %}
+                        </div>
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+            {% else %}
+            <section class="menu-block">
+                <div class="empty-state-card">
+                    <h3>Nenhum item disponível</h3>
+                    <p>Adicione produtos e categorias para exibir o cardápio digital nesta página.</p>
+                </div>
+            </section>
+            {% endfor %}
+
+            <div id="searchEmptyState" class="search-empty-state" hidden>
+                <h3>Nenhum item encontrado</h3>
+                <p>Tente buscar por outro nome.</p>
+            </div>
+
+            <section id="informacoes" class="menu-block info-grid">
+                <article class="info-card">
+                    <span class="block-kicker">Pedido</span>
+                    <h3>Como funciona</h3>
+                    <p>Escolha os itens por categoria, adicione ao carrinho e finalize o pedido em poucos cliques.</p>
+                </article>
+                <article class="info-card">
+                    <span class="block-kicker">Entrega</span>
+                    <h3>Atendimento digital</h3>
+                    <p>{{ store_settings['opening_hours'] if store_settings else 'Defina os horários no painel administrativo.' }}</p>
+                </article>
+                <article class="info-card">
+                    <span class="block-kicker">Gestão</span>
+                    <h3>Painel integrado</h3>
+                    <p>Seu fluxo continua ligado ao carrinho, pedidos, controle da loja e edição do cardápio.</p>
+                </article>
+            </section>
+        </main>
+    </div>
+
+    <a href="{{ url_for('carrinho') }}" class="floating-cart-bar">
+        <div>
+            <strong>Ver carrinho</strong>
+            <span>{{ cart_count.value }} item(ns)</span>
+        </div>
+        <span class="floating-cart-arrow">→</span>
+    </a>
+
+    <script>
+        const searchInput = document.getElementById('menuSearch');
+        const menuItems = Array.from(document.querySelectorAll('.menu-item'));
+        const searchEmptyState = document.getElementById('searchEmptyState');
+
+        function filterMenu() {
+            const term = searchInput.value.trim().toLowerCase();
+            let visibleItems = 0;
+
+            menuItems.forEach((item) => {
+                const itemName = item.dataset.name || '';
+                const matches = itemName.includes(term);
+                item.style.display = matches ? '' : 'none';
+                if (matches) {
+                    visibleItems += 1;
+                }
+            });
+
+            searchEmptyState.hidden = visibleItems !== 0 || term === '';
+        }
+
+        searchInput.addEventListener('input', filterMenu);
+    </script>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finalizar Pedido - Mj Porções</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="cart-page">
+    <main class="cart-shell">
+        <header class="cart-header">
+            <div>
+                <span class="cart-kicker">Checkout rápido</span>
+                <h1>Finalizar pedido</h1>
+                <p>Preencha os dados para enviar seu pedido sem precisar de cadastro.</p>
+            </div>
+            <a href="{{ url_for('carrinho') }}" class="cart-back-link">← Voltar ao carrinho</a>
+        </header>
+
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <section class="cart-flash-stack">
+            {% for message in messages %}
+              <div class="cart-flash">{{ message }}</div>
+            {% endfor %}
+            </section>
+          {% endif %}
+        {% endwith %}
+
+        <section class="checkout-grid">
+            <section class="checkout-card cart-items-panel">
+                <h2>Dados do cliente</h2>
+                <form method="POST" action="{{ url_for('finalizar_pedido') }}" class="checkout-form">
+                    <input type="hidden" name="csrf_action" value="finalizar_pedido">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token_for('finalizar_pedido') }}">
+                    <label>
+                        <span>Nome completo</span>
+                        <input type="text" name="customer_name" value="{{ customer_name or '' }}" required>
+                    </label>
+                    <label>
+                        <span>Telefone</span>
+                        <input type="tel" name="customer_phone" value="{{ customer_phone or '' }}" required>
+                    </label>
+                    <label>
+                        <span>Endereço de entrega</span>
+                        <textarea name="customer_address" rows="3" required>{{ customer_address or '' }}</textarea>
+                    </label>
+                    <label>
+                        <span>Bairro</span>
+                        <select name="delivery_area_id" id="delivery_area_id" required>
+                            <option value="">Selecione o bairro</option>
+                            {% for area in delivery_areas %}
+                            <option value="{{ area.id }}" data-fee="{{ area.delivery_fee }}" {% if selected_delivery_area_id|string == area.id|string %}selected{% endif %}>
+                                {{ area.name }} - R$ {{ "%.2f"|format(area.delivery_fee) }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>
+                        <span>Forma de pagamento</span>
+                        <select name="payment_method" id="payment_method" required>
+                            <option value="" {% if not payment_method %}selected{% endif %}>Selecione</option>
+                            <option value="pix" {% if payment_method == 'pix' %}selected{% endif %}>Pix</option>
+                            <option value="dinheiro" {% if payment_method == 'dinheiro' %}selected{% endif %}>Dinheiro</option>
+                            <option value="cartao_credito" {% if payment_method == 'cartao_credito' %}selected{% endif %}>Cartão de crédito</option>
+                            <option value="cartao_debito" {% if payment_method == 'cartao_debito' %}selected{% endif %}>Cartão de débito</option>
+                        </select>
+                    </label>
+                    <div id="changeOptions" class="change-options" {% if payment_method != 'dinheiro' %}hidden{% endif %}>
+                        <label class="admin-checkbox-row">
+                            <input type="checkbox" name="needs_change" id="needs_change" {% if needs_change %}checked{% endif %}>
+                            <span>Precisa de troco?</span>
+                        </label>
+                        <label id="changeForWrapper" {% if not needs_change %}hidden{% endif %}>
+                            <span>Troco para quanto?</span>
+                            <input type="number" step="0.01" min="0" name="change_for" id="change_for" value="{{ change_for or '' }}" placeholder="Ex: 100.00">
+                        </label>
+                    </div>
+                    <button type="submit" class="cart-primary-btn">Enviar pedido</button>
+                </form>
+            </section>
+
+            <aside class="cart-summary-card">
+                <span class="cart-kicker">Resumo</span>
+                <h2>Seu pedido</h2>
+                <div class="checkout-items">
+                    {% for id, item in carrinho.items() %}
+                    <div class="checkout-item-row">
+                        <span>{{ item.quantidade }}x {{ item.nome }}</span>
+                        <strong>R$ {{ "%.2f"|format(item.preco * item.quantidade) }}</strong>
+                    </div>
+                    {% endfor %}
+                </div>
+                <strong class="checkout-total">Total: R$ {{ "%.2f"|format(total) }}</strong>
+                <div class="checkout-fee-breakdown">
+                    <span>Subtotal: R$ {{ "%.2f"|format(subtotal) }}</span>
+                    <span id="deliveryFeeText">Taxa de entrega: R$ {{ "%.2f"|format(delivery_fee) }}</span>
+                    <strong id="grandTotalText">Total com entrega: R$ {{ "%.2f"|format(total) }}</strong>
+                </div>
+            </aside>
+        </section>
+    </main>
+
+    <script>
+        const paymentMethodSelect = document.getElementById('payment_method');
+        const deliveryAreaSelect = document.getElementById('delivery_area_id');
+        const changeOptions = document.getElementById('changeOptions');
+        const needsChangeCheckbox = document.getElementById('needs_change');
+        const changeForWrapper = document.getElementById('changeForWrapper');
+        const changeForInput = document.getElementById('change_for');
+        const deliveryFeeText = document.getElementById('deliveryFeeText');
+        const grandTotalText = document.getElementById('grandTotalText');
+        const subtotalValue = {{ "%.2f"|format(subtotal) }};
+
+        function parseFeeFromSelect() {
+            const selectedOption = deliveryAreaSelect.options[deliveryAreaSelect.selectedIndex];
+            if (!selectedOption || !selectedOption.dataset.fee) {
+                return 0;
+            }
+            const parsed = Number(selectedOption.dataset.fee);
+            return Number.isFinite(parsed) ? parsed : 0;
+        }
+
+        function syncDeliveryFee() {
+            const fee = parseFeeFromSelect();
+            const totalWithFee = subtotalValue + fee;
+            deliveryFeeText.textContent = `Taxa de entrega: R$ ${fee.toFixed(2)}`;
+            grandTotalText.textContent = `Total com entrega: R$ ${totalWithFee.toFixed(2)}`;
+        }
+
+        function syncChangeFields() {
+            const isCash = paymentMethodSelect.value === 'dinheiro';
+            changeOptions.hidden = !isCash;
+
+            if (!isCash) {
+                needsChangeCheckbox.checked = false;
+                changeForWrapper.hidden = true;
+                changeForInput.value = '';
+                return;
+            }
+
+            changeForWrapper.hidden = !needsChangeCheckbox.checked;
+            if (!needsChangeCheckbox.checked) {
+                changeForInput.value = '';
+            }
+        }
+
+        paymentMethodSelect.addEventListener('change', syncChangeFields);
+        needsChangeCheckbox.addEventListener('change', syncChangeFields);
+        deliveryAreaSelect.addEventListener('change', syncDeliveryFee);
+        syncChangeFields();
+        syncDeliveryFee();
+    </script>
+</body>
+</html>

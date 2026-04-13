@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meus Pedidos - Mj Porções</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="orders-page">
+    <main class="orders-shell">
+        <header class="orders-header-card">
+            <div>
+                <span class="orders-kicker">Acompanhamento</span>
+                <h1>Meus pedidos</h1>
+                <p>Veja o histórico dos pedidos realizados e acompanhe o status de cada um.</p>
+            </div>
+            <nav class="orders-nav-links">
+                {% if session.get('is_admin') %}
+                <a href="{{ url_for('admin_dashboard') }}">Painel admin</a>
+                {% endif %}
+                <a href="{{ url_for('produtos') }}">Ver cardápio</a>
+                {% if session.get('user_id') %}
+                <a href="{{ url_for('logout') }}" style="color: #d84c4c;">Sair</a>
+                {% endif %}
+            </nav>
+        </header>
+
+        <section class="orders-summary-grid">
+            <article class="orders-summary-card">
+                <span>Total</span>
+                <strong>{{ pedidos|length }}</strong>
+                <p>Pedidos já enviados pela sua conta.</p>
+            </article>
+            <article class="orders-summary-card">
+                <span>Pendentes</span>
+                <strong>{{ pedidos|selectattr('status', 'equalto', 'Pendente')|list|length }}</strong>
+                <p>Pedidos aguardando atualização.</p>
+            </article>
+            <article class="orders-summary-card">
+                <span>Entregues</span>
+                <strong>{{ pedidos|selectattr('status', 'equalto', 'Entregue')|list|length }}</strong>
+                <p>Pedidos concluídos com sucesso.</p>
+            </article>
+        </section>
+
+        <section class="orders-list-panel">
+            <div class="orders-section-title">
+                <h2>Histórico completo</h2>
+                <span>{{ pedidos|length }} registro(s)</span>
+            </div>
+
+            <div class="orders-list">
+                {% for pedido in pedidos %}
+                <article class="order-card-item">
+                    <div class="order-card-main">
+                        <div class="order-badge-id">#{{ pedido.id }}</div>
+                        <div>
+                            <h3>Pedido realizado em {{ pedido.data }}</h3>
+                            <p>Valor total de R$ {{ "%.2f"|format(pedido.total) }}</p>
+                        </div>
+                    </div>
+                    <div class="order-card-side">
+                        <span class="badge {% if pedido.status == 'Pendente' %}status-pending{% elif pedido.status == 'Entregue' %}status-success{% else %}status-info{% endif %}">
+                            {{ pedido.status }}
+                        </span>
+                    </div>
+                </article>
+                {% else %}
+                <div class="orders-empty-state">
+                    <h3>Você ainda não realizou pedidos</h3>
+                    <p>Quando fizer seu primeiro pedido, ele vai aparecer aqui com status e valor.</p>
+                    <a href="{{ url_for('produtos') }}" class="orders-primary-btn">Ir para o cardápio</a>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+    </main>
+</body>
+</html>

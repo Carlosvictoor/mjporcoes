@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Admin - Mj Porções</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body style="font-family: sans-serif; padding: 20px;">
+    <h2>📦 Painel de Gerenciamento de Pedidos</h2>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for message in messages %}
+          <p style="color: green; font-weight: bold;">{{ message }}</p>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <nav>
+        <a href="{{ url_for('admin_dashboard') }}">Voltar ao Painel</a> | 
+        <a href="{{ url_for('produtos') }}">Ver Cardápio</a>
+    </nav>
+
+    <hr>
+
+    <table border="1" style="width: 100%; border-collapse: collapse; text-align: left;">
+        <thead>
+            <tr style="background-color: #f2f2f2;">
+                <th style="padding: 10px;">ID</th>
+                <th style="padding: 10px;">Cliente</th>
+                <th style="padding: 10px;">Total</th>
+                <th style="padding: 10px;">Status Atual</th>
+                <th style="padding: 10px;">Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pedido in pedidos %}
+            <tr>
+                <td style="padding: 10px;">#{{ pedido.id }}</td>
+                <td style="padding: 10px;">{{ pedido.cliente }}</td>
+                <td style="padding: 10px;">R$ {{ "%.2f"|format(pedido.total) }}</td>
+                <td style="padding: 10px;">
+                    <strong>{{ pedido.status }}</strong>
+                </td>
+                <td style="padding: 10px;">
+                    <a href="{{ url_for('atualizar_status', pedido_id=pedido.id, status='A caminho') }}" 
+                       style="text-decoration: none; background: #2196F3; color: white; padding: 5px 10px; border-radius: 3px; font-size: 12px;">
+                       🛵 Saiu
+                    </a>
+
+                    <a href="{{ url_for('atualizar_status', pedido_id=pedido.id, status='Entregue') }}" 
+                       style="text-decoration: none; background: #4CAF50; color: white; padding: 5px 10px; border-radius: 3px; font-size: 12px;">
+                       ✔️ Entregue
+                    </a>
+
+                    <a href="{{ url_for('atualizar_status', pedido_id=pedido.id, status='Cancelado') }}" 
+                       style="text-decoration: none; background: #f44336; color: white; padding: 5px 10px; border-radius: 3px; font-size: 12px;">
+                       ❌
+                    </a>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" style="padding: 20px; text-align: center;">Nenhum pedido recebido ainda.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro - Mj Porções</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="auth-page">
+  <main class="auth-shell">
+    <section class="auth-card">
+      <span class="auth-kicker">Cadastro</span>
+      <h1>Criar conta</h1>
+      <p>Cadastre-se para salvar seus dados e finalizar pedidos com mais rapidez.</p>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+    <div class="auth-flash-stack">
+    {% for message in messages %}
+      <div class="auth-flash">{{ message }}</div>
+    {% endfor %}
+    </div>
+      {% endif %}
+    {% endwith %}
+
+      <form method="POST" class="auth-form">
+        <input type="hidden" name="csrf_action" value="register">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token_for('register') }}">
+        <input type="text" name="nome" placeholder="Nome" required>
+        <input type="email" name="email" placeholder="E-mail" required>
+        <input type="tel" name="whatsapp" placeholder="WhatsApp (opcional)">
+        <input type="password" name="senha" placeholder="Senha" required>
+        <button type="submit">Cadastrar</button>
+      </form>
+
+      <p class="auth-footer-link">Já tem conta? <a href="{{ url_for('login') }}">Faça login</a></p>
+    </section>
+  </main>
+</body>
+</html>

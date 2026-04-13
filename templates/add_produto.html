@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Novo Produto - Mj Porções</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="product-admin-page">
+  <main class="product-admin-shell">
+    <header class="product-admin-header">
+      <div>
+        <span class="orders-kicker">Cardápio</span>
+        <h1>Gerenciar produtos</h1>
+        <p>Cadastre, edite e organize os itens do cardápio por categoria.</p>
+      </div>
+      <div class="product-admin-nav">
+        <a href="{{ url_for('admin_dashboard') }}">Painel admin</a>
+        <a href="{{ url_for('produtos') }}">Ver cardápio</a>
+      </div>
+    </header>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+    <section class="cart-flash-stack">
+      {% for message in messages %}
+      <div class="cart-flash">{{ message }}</div>
+      {% endfor %}
+    </section>
+      {% endif %}
+    {% endwith %}
+
+    <section class="product-admin-grid">
+      <article class="product-form-card">
+        <h2>{% if editing_product %}Editar produto{% else %}Novo produto{% endif %}</h2>
+        <form method="POST" enctype="multipart/form-data" class="admin-form-grid" action="{% if editing_product %}{{ url_for('editar_produto', produto_id=editing_product.id) }}{% else %}{{ url_for('add_produto') }}{% endif %}">
+          <input type="hidden" name="csrf_action" value="{% if editing_product %}editar_produto{% else %}add_produto{% endif %}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token_for('editar_produto') if editing_product else csrf_token_for('add_produto') }}">
+          <label>
+            <span>Nome do produto</span>
+            <input type="text" name="nome" value="{{ editing_product.nome if editing_product else '' }}" required>
+          </label>
+          <label>
+            <span>Preço</span>
+            <input type="number" step="0.01" name="preco" value="{{ editing_product.preco if editing_product else '' }}" required>
+          </label>
+          <label class="admin-full-width">
+            <span>Descrição</span>
+            <textarea name="descricao" rows="4">{{ editing_product.descricao if editing_product else '' }}</textarea>
+          </label>
+          <label>
+            <span>Categoria</span>
+            <select name="category_id">
+              <option value="">Sem categoria</option>
+              {% for categoria in categorias %}
+              <option value="{{ categoria.id }}" {% if editing_product and editing_product.category_id == categoria.id %}selected{% endif %}>{{ categoria.name }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            <span>Imagem</span>
+            <input type="file" name="imagem" accept="image/*">
+          </label>
+          <label class="admin-checkbox-row">
+            <input type="checkbox" name="is_featured" {% if editing_product and editing_product.is_featured %}checked{% endif %}>
+            <span>Mostrar nos destaques</span>
+          </label>
+          <label class="admin-checkbox-row">
+            <input type="checkbox" name="is_active" {% if not editing_product or editing_product.is_active %}checked{% endif %}>
+            <span>Produto visível no cardápio</span>
+          </label>
+          <button type="submit" class="btn-admin-gold admin-full-width">{% if editing_product %}Salvar alterações{% else %}Adicionar ao cardápio{% endif %}</button>
+        </form>
+      </article>
+
+      <article class="product-list-card">
+        <div class="orders-section-title">
+          <h2>Produtos cadastrados</h2>
+          <span>{{ produtos|length }} item(ns)</span>
+        </div>
+        <div class="product-admin-list">
+          {% for produto in produtos %}
+          <article class="product-admin-item">
+            <div>
+              <h3>{{ produto.nome }}</h3>
+              <p>{{ produto.category_name or 'Sem categoria' }} · R$ {{ "%.2f"|format(produto.preco) }}</p>
+            </div>
+            <div class="product-admin-actions">
+              <a href="{{ url_for('add_produto', edit_id=produto.id) }}">Editar</a>
+              <form action="{{ url_for('excluir_produto', produto_id=produto.id) }}" method="POST">
+                <input type="hidden" name="csrf_action" value="excluir_produto">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token_for('excluir_produto') }}">
+                <button type="submit">Excluir</button>
+              </form>
+            </div>
+          </article>
+          {% else %}
+          <p class="admin-empty-text">Nenhum produto cadastrado ainda.</p>
+          {% endfor %}
+        </div>
+      </article>
+    </section>
+  </main>
+</body>
+</html>
